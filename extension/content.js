@@ -15,22 +15,153 @@
     );
   }
 
-  function transcriptFromJson3(data) {
-    const lines = [];
-    for (const event of data?.events || []) {
-      const line = (event.segs || [])
-        .map((segment) => segment.utf8 || "")
-        .join("")
-        .replace(/\s+/g, " ")
-        .trim();
-      if (line && line !== lines.at(-1)) lines.push(line);
+  function joinCaptionParts(parts) {
+    return parts
+      .join(" ")
+      .replace(/\s+/g, " ")
+      .replace(/([\u3400-\u9fff])\s+(?=[\u3400-\u9fff])/g, "$1")
+      .trim();
+  }
+
+  function isCjkText(text) {
+    return (text.match(/[\u3400-\u9fff]/g) || []).length > text.length / 3;
+  }
+
+  function safeWordBreaks(text) {
+    const segments =
+      typeof Intl !== "undefined" && typeof Intl.Segmenter === "function"
+        ? [...new Intl.Segmenter("zh", { granularity: "word" }).segment(text)]
+        : [...text.matchAll(/[A-Za-z0-9]+|./gu)].map((match) => ({
+            index: match.index,
+            segment: match[0],
+          }));
+    const breaks = [];
+    let bracketDepth = 0;
+
+    for (const { index, segment } of segments) {
+      for (const character of segment) {
+        if (/[（(【\[《「『]/.test(character)) bracketDepth += 1;
+        if (/[）)】\]》」』]/.test(character)) bracketDepth = Math.max(0, bracketDepth - 1);
+      }
+
+      const end = index + segment.length;
+      const left = text.slice(0, end);
+      const right = text.slice(end);
+      const joinsParenthetical = /[A-Za-z0-9]$/.test(left) && /^[（(]/.test(right);
+      const joinsNumberUnit =
+        /\d(?:\.\d+)?(?:万|亿)?$/.test(left) && /^(?:万|亿|美元|人民币|元|[%％])/.test(right);
+      if (
+        end < text.length &&
+        bracketDepth === 0 &&
+        !joinsParenthetical &&
+        !joinsNumberUnit
+      ) {
+        breaks.push(end);
+      }
     }
 
-    return lines
-      .join(" ")
-      .replace(/([\u3400-\u9fff])\s+(?=[\u3400-\u9fff])/g, "$1")
-      .replace(/([.!?。！？])\s+/g, "$1\n\n")
-      .trim();
+    return breaks;
+  }
+
+  function isSafeEventBreak(left, right) {
+    return safeWordBreaks(`${left}${right}`).includes(left.length);
+  }
+
+  function wrapLongSentence(sentence) {
+    const cjk = isCjkText(sentence);
+    const maxLength = cjk ? 24 : 140;
+    const lines = [];
+    let remaining = sentence.trim();
+
+    while (remaining.length > maxLength) {
+      let breakAt;
+      if (cjk) {
+        const breaks = safeWordBreaks(remaining);
+        const punctuationBreak = breaks
+          .filter(
+            (index) =>
+              index >= 8 &&
+              index <= maxLength &&
+              /[，、；：,;:]$/.test(remaining.slice(0, index))
+          )
+          .at(-1);
+        const whitespaceBreak = breaks
+          .filter(
+            (index) =>
+              index >= 8 && index <= maxLength && /\s$/.test(remaining.slice(0, index))
+          )
+          .at(-1);
+        breakAt =
+          punctuationBreak ||
+          whitespaceBreak ||
+          breaks.filter((index) => index >= 8 && index <= maxLength).at(-1) ||
+          breaks.find((index) => index > maxLength);
+      } else {
+        breakAt = Math.max(
+          ...[",", ";", ":"].map((mark) => remaining.lastIndexOf(mark, maxLength) + 1),
+          remaining.lastIndexOf(" ", maxLength)
+        );
+        if (breakAt < maxLength / 2) breakAt = maxLength;
+      }
+      if (!breakAt) break;
+      lines.push(remaining.slice(0, breakAt).trim());
+      remaining = remaining.slice(breakAt).trim();
+    }
+
+    if (remaining) lines.push(remaining);
+    return lines;
+  }
+
+  function splitSentences(text) {
+    const sentences =
+      typeof Intl !== "undefined" && typeof Intl.Segmenter === "function"
+        ? [...new Intl.Segmenter(undefined, { granularity: "sentence" }).segment(text)].map(
+            ({ segment }) => segment.trim()
+          )
+        : text.match(/[^.!?。！？]+[.!?。！？]+|[^.!?。！？]+$/g) || [text];
+    return sentences.filter(Boolean).flatMap(wrapLongSentence);
+  }
+
+  function transcriptFromJson3(data) {
+    const chunks = [];
+    let parts = [];
+    let previousEnd;
+    let previousText = "";
+
+    for (const event of data?.events || []) {
+      const start = Number(event.tStartMs);
+      const end = Number.isFinite(start) ? start + (Number(event.dDurationMs) || 0) : undefined;
+      const text = joinCaptionParts((event.segs || []).map((segment) => segment.utf8 || ""));
+      if (!text) continue;
+      if (text === previousText) {
+        if (end !== undefined) previousEnd = Math.max(previousEnd || end, end);
+        continue;
+      }
+
+      if (isCjkText(text)) {
+        const current = joinCaptionParts(parts);
+        if (current && (!isCjkText(current) || isSafeEventBreak(current, text))) {
+          chunks.push(current);
+          parts = [];
+        }
+        parts = parts.length ? [`${joinCaptionParts(parts)}${text}`] : [text];
+        previousText = text;
+        previousEnd = end ?? previousEnd;
+        continue;
+      }
+
+      if (parts.length && Number.isFinite(start) && start - previousEnd >= 800) {
+        chunks.push(joinCaptionParts(parts));
+        parts = [];
+      }
+
+      parts.push(text);
+      previousText = text;
+      previousEnd = end ?? previousEnd;
+    }
+
+    if (parts.length) chunks.push(joinCaptionParts(parts));
+    return chunks.flatMap(splitSentences).join("\n\n").trim();
   }
 
   function transcriptFromJson3Text(text) {

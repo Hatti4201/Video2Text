@@ -40,8 +40,74 @@ assert.equal(
   transcriptFromJson3({
     events: [{ segs: [{ utf8: "这是" }] }, { segs: [{ utf8: "中文字幕。" }] }],
   }),
-  "这是中文字幕。"
+  "这是\n\n中文字幕。"
 );
+
+const shortChineseClauses = [
+  "这一切像电影一样",
+  "因为我们完全没有去备孕",
+  "这个完全是意外怀孕",
+  "这两件事情发生在同一天",
+  "我真的感觉非常的巧合",
+  "到家之后我老婆看到了我啊",
+  "就立马",
+];
+assert.equal(
+  transcriptFromJson3({
+    events: shortChineseClauses.map((utf8) => ({ segs: [{ utf8 }] })),
+  }),
+  shortChineseClauses.join("\n\n")
+);
+
+assert.equal(
+  transcriptFromJson3({
+    events: [
+      { tStartMs: 0, dDurationMs: 500, segs: [{ utf8: "First complete thought" }] },
+      { tStartMs: 1500, dDurationMs: 500, segs: [{ utf8: "Second complete thought" }] },
+    ],
+  }),
+  "First complete thought\n\nSecond complete thought"
+);
+
+assert.equal(
+  transcriptFromJson3({
+    events: [{ segs: [{ utf8: "第一句。第二句！第三句？" }] }],
+  }),
+  "第一句。\n\n第二句！\n\n第三句？"
+);
+
+const longEnglish = "readable words ".repeat(20).trim();
+const wrappedEnglish = transcriptFromJson3({ events: [{ segs: [{ utf8: longEnglish }] }] });
+assert.ok(wrappedEnglish.split("\n\n").every((line) => line.length <= 140));
+assert.equal(wrappedEnglish.replace(/\n\n/g, " "), longEnglish);
+
+const longChinese = "这是没有标点的自动字幕".repeat(12);
+const wrappedChinese = transcriptFromJson3({ events: [{ segs: [{ utf8: longChinese }] }] });
+assert.ok(wrappedChinese.split("\n\n").every((line) => line.length <= 24));
+assert.equal(wrappedChinese.replace(/\n\n/g, ""), longChinese);
+
+const mixedChinese = transcriptFromJson3({
+  events: [
+    { segs: [{ utf8: "xArk创立之初便完成1亿美元种子轮融资RadixArk最终使命是要做下一代A" }] },
+    { segs: [{ utf8: "I 我想要build（构建）的那个未来就是一个跟强力AI共存的未来" }] },
+    { segs: [{ utf8: "以我跟Inf" }] },
+    { segs: [{ utf8: "ra的之间的浪漫关系我觉得Infra本身就是产品" }] },
+    { segs: [{ utf8: "你本身是一个喜欢intense（高强度" }] },
+    { segs: [{ utf8: "）的人吗它是一个特点我应该顺着我的天" }] },
+    { segs: [{ utf8: "性去做事情" }] },
+  ],
+});
+for (const word of [
+  "1亿美元",
+  "下一代AI",
+  "Infra",
+  "intense（高强度）",
+  "天性",
+]) {
+  assert.match(mixedChinese, new RegExp(word.replace(/[（）]/g, "\\$&")));
+}
+assert.doesNotMatch(mixedChinese, /A\n\nI|Inf\n\nra|高强度\n\n）|天\n\n性/);
+assert.match(mixedChinese, /下一代AI\n\n我想要/);
 
 assert.throws(() => transcriptFromJson3Text(""), /没有可读取的字幕/);
 assert.throws(() => transcriptFromJson3Text("not json"), /无法识别的字幕格式/);
