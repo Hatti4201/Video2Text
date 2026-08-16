@@ -1,0 +1,178 @@
+/* Colors below all read from the --v2t-* custom properties defined in
+   theme.css, so the whole panel re-themes by editing that one file. */
+
+#v2t-panel {
+  all: initial;
+  box-sizing: border-box;
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", -apple-system, sans-serif;
+}
+#v2t-panel * {
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+/* ── Panel — sits inline at the top of YouTube's sidebar, not floating ────
+   Total height is fixed (header + body), so scrolling the transcript never
+   grows or shrinks the panel itself — collapsing .v2t-controls just frees
+   up space that .v2t-content (flex: 1) expands into. */
+#v2t-panel {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  margin: 0 0 16px;
+  background: var(--v2t-background);
+  border-radius: calc(var(--v2t-radius) * 3);
+  border: 1px solid var(--v2t-border);
+  overflow: hidden;
+}
+
+.v2t-header {
+  flex: 0 0 auto;
+  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  margin: 6px 10px 0;
+  padding: 3px 8px;
+  background: var(--v2t-primary);
+  color: var(--v2t-primary-foreground);
+  border-radius: calc(var(--v2t-radius) * 20);
+}
+.v2t-title {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.v2t-body {
+  flex: 0 0 auto;
+  height: var(--v2t-panel-height, 380px);
+  display: flex;
+  flex-direction: column;
+  padding: 6px 10px 8px;
+  gap: 4px;
+  min-height: 0;
+}
+
+.v2t-controls {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 68px;
+  overflow: hidden;
+  transition: max-height 0.2s ease, opacity 0.15s ease;
+}
+#v2t-panel.v2t-collapsed .v2t-controls {
+  max-height: 0;
+  opacity: 0;
+}
+
+.v2t-video-title {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--v2t-muted-foreground);
+  min-height: 14px;
+}
+
+.v2t-generate {
+  align-self: flex-start;
+  border: none;
+  border-radius: calc(var(--v2t-radius) * 20);
+  padding: 4px 9px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--v2t-primary-foreground);
+  background: var(--v2t-primary);
+  cursor: pointer;
+}
+.v2t-generate:hover:not(:disabled) {
+  background: color-mix(in oklch, var(--v2t-primary) 85%, black);
+}
+.v2t-generate:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.v2t-status {
+  font-size: 11px;
+  color: var(--v2t-destructive);
+}
+.v2t-status:empty {
+  display: none;
+}
+
+.v2t-panels {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+.v2t-pane {
+  display: none;
+  position: relative;
+  height: 100%;
+  min-height: 0;
+}
+.v2t-pane.active {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.v2t-actions {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+}
+.v2t-copy,
+.v2t-download {
+  border: 1px solid var(--v2t-border);
+  background: color-mix(in oklch, var(--v2t-popover) 90%, transparent);
+  color: var(--v2t-primary);
+  border-radius: calc(var(--v2t-radius) * 20);
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.v2t-copy:hover:not(:disabled),
+.v2t-download:hover:not(:disabled) {
+  background: var(--v2t-popover);
+}
+.v2t-copy:disabled,
+.v2t-download:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.v2t-content {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  background: var(--v2t-popover);
+  border-radius: calc(var(--v2t-radius) * 2);
+  border: 1px solid var(--v2t-input);
+  padding: 8px 10px;
+}
+.v2t-content::-webkit-scrollbar {
+  width: 6px;
+}
+.v2t-content::-webkit-scrollbar-thumb {
+  background: color-mix(in oklch, var(--v2t-primary) 55%, var(--v2t-popover));
+  border-radius: calc(var(--v2t-radius) * 20);
+}
+.v2t-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.v2t-placeholder {
+  color: var(--v2t-muted-foreground);
+  font-size: 12.5px;
+  margin: 0;
+}
+.v2t-text {
+  font-size: 12.5px;
+  color: var(--v2t-foreground);
+  line-height: 1.5;
+  margin: 3px 0;
+}

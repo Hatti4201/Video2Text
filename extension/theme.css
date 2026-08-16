@@ -1,0 +1,52 @@
+/* Design tokens for the injected panel, scoped to our own elements so we
+   never leak variables into YouTube's page. "default" matches YouTube's own
+   red/white/black branding, and follows the OS light/dark setting
+   automatically via prefers-color-scheme. Same values as app/theme.py (the
+   desktop app's default theme) — add more themes later by swapping the
+   values here. */
+#v2t-panel {
+  --v2t-background: #ffffff;
+  --v2t-foreground: #0f0f0f;
+  --v2t-card: #f9f9f9;
+  --v2t-card-foreground: #0f0f0f;
+  --v2t-popover: #ffffff;
+  --v2t-popover-foreground: #0f0f0f;
+  --v2t-primary: #cc0000;
+  --v2t-primary-foreground: #ffffff;
+  --v2t-secondary: #272727;
+  --v2t-secondary-foreground: #ffffff;
+  --v2t-muted: #f2f2f2;
+  --v2t-muted-foreground: #606060;
+  --v2t-accent: #e5e5e5;
+  --v2t-accent-foreground: #0f0f0f;
+  --v2t-destructive: #d93025;
+  --v2t-destructive-foreground: #ffffff;
+  --v2t-border: #e5e5e5;
+  --v2t-input: #e5e5e5;
+  --v2t-ring: #cc0000;
+  --v2t-radius: 0.4rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  #v2t-panel {
+    --v2t-background: #0f0f0f;
+    --v2t-foreground: #f1f1f1;
+    --v2t-card: #212121;
+    --v2t-card-foreground: #f1f1f1;
+    --v2t-popover: #212121;
+    --v2t-popover-foreground: #f1f1f1;
+    --v2t-primary: #cc0000;
+    --v2t-primary-foreground: #ffffff;
+    --v2t-secondary: #3f3f3f;
+    --v2t-secondary-foreground: #f1f1f1;
+    --v2t-muted: #272727;
+    --v2t-muted-foreground: #aaaaaa;
+    --v2t-accent: #3f3f3f;
+    --v2t-accent-foreground: #f1f1f1;
+    --v2t-destructive: #ff5252;
+    --v2t-destructive-foreground: #0f0f0f;
+    --v2t-border: #3f3f3f;
+    --v2t-input: #3f3f3f;
+    --v2t-ring: #cc0000;
+  }
+}
